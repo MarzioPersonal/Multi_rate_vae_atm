@@ -162,7 +162,6 @@ cython_debug/
 # list all the files to ignore
 .DS_Store
 *.csv
-*.txt
 *.pt
 *.pkl
 
