@@ -1,5 +1,6 @@
 from torch import nn
 import torch
+from activation_mrvae import EncoderActivation, DecoderActivation
 
 
 class MRVAELayer(nn.Module):
@@ -16,3 +17,19 @@ class MRVAELayer(nn.Module):
             # Unsqueeze for convolutional layers.
             scale = scale.unsqueeze(-1).unsqueeze(-1)
         return scale * inputs
+
+
+class EncoderMRVAELayer(MRVAELayer):
+    def __init__(self, features: int) -> None:
+        super().__init__(features, EncoderActivation())
+
+    def forward(self, inputs: torch.Tensor, betas: torch.Tensor) -> torch.Tensor:
+        return super().forward(inputs, betas)
+
+
+class DecoderMRVAELayer(MRVAELayer):
+    def __init__(self, features: int) -> None:
+        super().__init__(features, DecoderActivation())
+
+    def forward(self, inputs: torch.Tensor, betas: torch.Tensor) -> torch.Tensor:
+        return super().forward(inputs, betas)

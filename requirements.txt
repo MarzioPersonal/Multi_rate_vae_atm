@@ -1,3 +1,5 @@
-numpy
-torch
+numpy~=1.26.1
+torch~=2.1.0
 pandas
+matplotlib~=3.8.0
+torchvision~=0.16.0
