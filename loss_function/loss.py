@@ -1,5 +1,6 @@
 import torch.nn as nn
-from functional.loss import vae_loss, beta_vae_loss
+
+from loss_function.functional.loss import vae_loss, beta_vae_loss
 
 
 class VaeLoss(nn.Module):
