@@ -1,5 +1,5 @@
 # Multi_rate_vae_gdl
-
+We show the PyTorch implementation of the MR-VAE layer in Listing 1. The MR-VAE layer can be viewed as pre-activations gating and can be introduced after linear or convolutional layers.
 
 
 # datasets:

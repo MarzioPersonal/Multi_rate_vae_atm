@@ -3,13 +3,6 @@ import torch.nn.functional as F
 from torch import Tensor
 
 
-def vae_loss(x_reconstructed, x, mu, logvar):
-    rec_loss: Tensor = reconstruction_loss(x_reconstructed, x)
-    KDL: Tensor = kdl_loss(mu, logvar)
-    loss: Tensor = rec_loss + KDL
-
-    return rec_loss, KDL, loss
-
 
 def beta_vae_loss(x_reconstructed, x, mu, logvar, beta):
     rec_loss: Tensor = reconstruction_loss(x_reconstructed, x)
