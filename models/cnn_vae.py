@@ -2,8 +2,10 @@ import torch
 import torch.nn as nn
 
 from loss_function.loss import FixedBetaVaeLoss, VariateBetaVaeLoss
-from layers.MultiRateConvolution import MultiRateDecoderConvTranspose2d, MultiRateEncoderConv2d, MultiRateSequential
+from layers.MultiRateConvolution import MultiRateDecoderConvTranspose2d, MultiRateEncoderConv2d
+from layers.MultiRateSequential import MultiRateSequential
 from distributions.beta_distribution import BetaUniform
+
 
 def test_shape(input_p, in_channels, latent_dim, is_cifar, is_celeba):
     with torch.no_grad():
@@ -128,14 +130,11 @@ class AbstractCnnVae(nn.Module):
                 decode_block(in_channels=256, out_channels=in_channels, kernel_size=kernel_size, stride=2, padding=1,
                              output_padding=1, last=True))
 
-
     def decode_prep(self, x):
         batch_size = x.shape[0]
         x = self.decoder_emb(x)
         x = x.reshape(batch_size, *self.shapes)
         return x
-
-
 
     def reparameterize(self, mu, std):
         eps = torch.randn_like(std)
@@ -144,7 +143,8 @@ class AbstractCnnVae(nn.Module):
 
 class BetaCnnVae(AbstractCnnVae):
 
-    def __init__(self, in_channels: int, latent_dimension: int, is_cifar: bool = False, is_celeba: bool = False, beta=1.):
+    def __init__(self, in_channels: int, latent_dimension: int, is_cifar: bool = False, is_celeba: bool = False,
+                 beta=1.):
         super().__init__(in_channels, latent_dimension, is_cifar, is_celeba, False)
         self.beta = beta
         self.loss_fn = FixedBetaVaeLoss(beta)
@@ -159,6 +159,7 @@ class BetaCnnVae(AbstractCnnVae):
         for module in self.decoder_list:
             input = module(input)
         return input
+
     def forward(self, x):
         out = self.encode(x)
         mu = self.mu(out)
@@ -170,6 +171,7 @@ class BetaCnnVae(AbstractCnnVae):
         reconstruction_loss, KDL, loss = self.loss_fn(x_reconstructed, x, mu, logvar)
         return x_reconstructed, x, z, mu, logvar, reconstruction_loss, KDL, loss
 
+
 class MultiRateCnnVae(AbstractCnnVae):
 
     def __init__(self, in_channels: int, latent_dimension: int, is_cifar: bool = False, is_celeba: bool = False):
@@ -177,7 +179,6 @@ class MultiRateCnnVae(AbstractCnnVae):
 
         self.beta_uniform = BetaUniform()
         self.loss_fn = VariateBetaVaeLoss()
-
 
     def encode(self, input, beta):
         for module in self.encoder_list:
@@ -197,7 +198,7 @@ class MultiRateCnnVae(AbstractCnnVae):
         return super().reparameterize(mu, std)
 
     def forward(self, x):
-        log_beta = self.beta_uniform.sample(sample_shape=torch.Size((x.shape[0],1)))
+        log_beta = self.beta_uniform.sample(sample_shape=torch.Size((x.shape[0], 1)))
         out = self.encode(x, log_beta)
         mu = self.mu(out)
         logvar = self.logvar(out)
@@ -224,6 +225,6 @@ def test_shapes():
     print('CELEBA')
     test_shape(input_celeb, 3, latent_dim, False, True)
 
+
 if __name__ == '__main__':
     test_shapes()
-

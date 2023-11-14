@@ -18,12 +18,3 @@ class FixedBetaVaeLoss(nn.Module):
 
     def forward(self, x_reconstructed, x, mu, logvar):
         return beta_vae_loss(x_reconstructed, x, mu, logvar, self.beta)
-
-
-class VaeLoss(FixedBetaVaeLoss):
-    def __init__(self):
-        super().__init__(beta=1.)
-
-    def forward(self, x_reconstructed, x, mu, logvar):
-        return beta_vae_loss(x_reconstructed, x, mu, logvar, self.beta)
-
