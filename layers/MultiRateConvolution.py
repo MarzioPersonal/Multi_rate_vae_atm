@@ -9,7 +9,7 @@ from torch.nn.modules.container import T
 from layers.MultiRateVaeLayer import EncoderMRVAELayer, DecoderMRVAELayer
 
 
-class MultiRateEncoderConv2d(nn.Conv2d):
+class MultiRateConv2d(nn.Conv2d):
     def __init__(self, in_channels: int, out_channels: int, kernel_size: _size_2_t, stride: _size_2_t = 1,
                  padding: Union[str, _size_2_t] = 0, dilation: _size_2_t = 1, groups: int = 1, bias: bool = True,
                  padding_mode: str = 'zeros', device=None, dtype=None) -> None:
@@ -26,7 +26,7 @@ class MultiRateEncoderConv2d(nn.Conv2d):
         return self.multi_rate_layer.forward(x, beta)
 
 
-class MultiRateDecoderConvTranspose2d(nn.ConvTranspose2d):
+class MultiRateConvTranspose2d(nn.ConvTranspose2d):
     def __init__(self, in_channels: int, out_channels: int, kernel_size: _size_2_t, stride: _size_2_t = 1,
                  padding: _size_2_t = 0, output_padding: _size_2_t = 0, groups: int = 1, bias: bool = True,
                  dilation: _size_2_t = 1, padding_mode: str = 'zeros', device=None, dtype=None) -> None:

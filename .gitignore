@@ -172,3 +172,8 @@ datasets/MNIST
 datasets/omniglot-py
 datasets/MNIST/*
 datasets/omniglot-py/*
+
+trainers/MNIST
+trainers/omniglot-py
+trainers/MNIST/*
+trainers/omniglot-py/*
