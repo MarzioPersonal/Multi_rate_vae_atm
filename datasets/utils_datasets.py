@@ -30,6 +30,9 @@ def get_dataloaders(train_dataset,
     test_dataloader = DataLoader(test_dataset, shuffle=False, batch_size=batch_size_test)
     return train_dataloader, val_dataloader, test_dataloader
 
+def binarize_image(image):
+    threshold = 0.1307
+    return (image > threshold).float()
 
 def get_mnist_binary_static_loaders(
         batch_size_train: int = 32,
@@ -41,9 +44,10 @@ def get_mnist_binary_static_loaders(
 ) -> tuple[DataLoader, DataLoader | None, DataLoader]:
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize((0.1307,), (0.3081,)),
-        lambda x: x >= 0.1307,
-        lambda x: x.float()
+        transforms.Lambda(lambda x: binarize_image(x))
+        # transforms.Normalize((0.1307,), (0.3081,)),
+        # lambda x: x >= 0.1307,
+        # lambda x: x.float()
     ])
 
     data_train_val = MNIST(root='./data', train=True, download=True, transform=transform)
