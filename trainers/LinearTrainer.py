@@ -18,7 +18,7 @@ from tqdm.notebook import tqdm
 
 
 class LinearTrainer:
-    def __init__(self, loaders: tuple, use_multi_rate=False, beta=1., lr=1e-3, warmup_phase=10, epochs=20):
+    def __init__(self, loaders: tuple, use_multi_rate=False, beta=1., lr=1e-3, warmup_phase=10, epochs=200):
         self.model = LinearVae(use_multi_rate=use_multi_rate).to(DEVICE)
         # self.model = torch.compile(self.model)
         self.train_loader, self.val_loader, self.test_loader = loaders
@@ -121,7 +121,7 @@ class LinearTrainer:
 
 class GridSearcher:
     def __init__(self, loaders):
-        self.lrs = [0.01, 0.003, 0.001] #0.0003, 0.0001, 0.00003, 0.00001]
+        self.lrs = [0.01, 0.003, 0.001, 0.0003, 0.0001, 0.00003, 0.00001]
         self.betas = np.linspace(np.log(0.01), np.log(10), num=10)
         self.mrvae_models = []
         self.beta_models = []
