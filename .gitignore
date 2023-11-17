@@ -165,7 +165,8 @@ cython_debug/
 *.pt
 *.pkl
 .vscode
-
+data
+data/*
 datasets/data
 datasets/data/*
 trainers/data
