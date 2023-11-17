@@ -7,20 +7,23 @@ import matplotlib.pyplot as plt
 
 from datasets.utils_datasets import get_mnist_binary_static_loaders
 from models.linearVae import LinearVae
-from loss_function.loss import gaussian_vae_loss
+from loss_function.loss import gaussian_vae_loss, GaussianVAELoss
 from distributions.beta_distribution import BetaUniform
 from learning_scheduler.WarmupCosineLearningRateScheduler import WarmupCosineDecayScheduler
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 import os
 
+from tqdm.notebook import tqdm
+
 
 class LinearTrainer:
-    def __init__(self, loaders: tuple, use_multi_rate=False, beta=1., lr=1e-3, warmup_phase=10, epochs=200):
+    def __init__(self, loaders: tuple, use_multi_rate=False, beta=1., lr=1e-3, warmup_phase=10, epochs=20):
         self.model = LinearVae(use_multi_rate=use_multi_rate).to(DEVICE)
+        # self.model = torch.compile(self.model)
         self.train_loader, self.val_loader, self.test_loader = loaders
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
-        self.loss_fn = gaussian_vae_loss
+        self.loss_fn = GaussianVAELoss().to(DEVICE)
         self.use_multi_rate = use_multi_rate
         if use_multi_rate:
             self.name = f'mrvae_{lr}_{1.}'
@@ -47,16 +50,17 @@ class LinearTrainer:
         return self.beta
 
     def train(self):
-        for ep in range(self.epochs):
+        for ep in tqdm(range(self.epochs)):
             ep_loss = 0
             self.model.train()
             # sample mini-batches
             for inputs, _ in self.train_loader:
+                inputs = inputs.to(DEVICE)
                 # sample beta
                 log_betas = self.sample_beta(batch_size=inputs.shape[0])
                 self.optimizer.zero_grad()
                 x_pred, (mu, logvar) = self.model.forward(inputs, log_betas)
-                loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred, inputs, mu, logvar, self.beta)
+                loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta)
                 loss.backward()
                 self.optimizer.step()
 
@@ -69,9 +73,10 @@ class LinearTrainer:
         with torch.no_grad():
             train_loss = 0
             for inputs, _ in self.val_loader:
+                inputs = inputs.to(DEVICE)
                 if self.use_multi_rate:
-                    beta = torch.ones(size=(inputs.shape[0], 1))
-                    beta = torch.log(beta).to(DEVICE)
+                    beta = torch.ones(size=(inputs.shape[0], 1), device=DEVICE)
+                    beta = torch.log(beta)
                     beta_loss = 1.
                 else:
                     beta = self.beta
@@ -89,12 +94,11 @@ class LinearTrainer:
         with torch.no_grad():
             for inputs, _ in self.test_loader:
                 if self.use_multi_rate:
-                    beta_in = torch.ones(inputs.shape[0], 1) * beta_in
-                    beta_in.to(DEVICE)
-                x_pred, (mu, logvar) = self.model.forward(inputs, beta_in)
-                loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss)
+                    beta_in = torch.ones(size=(inputs.shape[0], 1), device=DEVICE) * beta_in
+                x_pred, (mu, logvar) = self.model.forward(inputs.to(DEVICE), beta_in)
+                loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred.to(DEVICE), inputs.to(DEVICE), mu.to(DEVICE), logvar.to(DEVICE), beta_loss)
                 rec_losses += rec_loss
-                kdl_losses += rec_losses
+                kdl_losses += kdl_loss
                 losses += loss.item()
         losses = losses / len(self.test_loader)
         kdl_losses = kdl_losses / len(self.test_loader)
@@ -116,8 +120,7 @@ class LinearTrainer:
 
 class GridSearcher:
     def __init__(self, loaders):
-        self.epochs = 1
-        self.lrs = [0.01, 0.003, 0.001, 0.0003, 0.0001, 0.00003, 0.00001]
+        self.lrs = [0.01, 0.003, 0.001] #0.0003, 0.0001, 0.00003, 0.00001]
         self.betas = np.linspace(np.log(0.01), np.log(10), num=10)
         self.mrvae_models = []
         self.beta_models = []
