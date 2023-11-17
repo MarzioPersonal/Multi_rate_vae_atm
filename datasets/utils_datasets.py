@@ -1,6 +1,7 @@
 import torch.nn
+import torchvision
 from torchvision.datasets import MNIST, Omniglot, CIFAR10, SVHN, CelebA
-from torchvision import transforms
+from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
 
 
@@ -38,23 +39,32 @@ def get_mnist_binary_static_loaders(
         seed=None,
         shuffle: bool = True
 ) -> tuple[DataLoader, DataLoader | None, DataLoader]:
-    data_transform = transforms.Compose([
+    transform = transforms.Compose([
         transforms.ToTensor(),
         transforms.Normalize((0.1307,), (0.3081,)),
         lambda x: x >= 0.1307,
         lambda x: x.float()
     ])
 
-    data_train_val = MNIST(root='./', train=True, download=True, transform=data_transform)
-    data_test = MNIST(root='./', train=False, download=True, transform=data_transform)
-    return get_dataloaders(data_train_val, data_test,
+    data_train_val = MNIST(root='./data', train=True, download=True, transform=transform)
+    validation_size = 10000
+    validation_start_index = len(data_train_val) - validation_size
+    validation_dataset = MNIST(root='./data', train=True, download=True, transform=transform)
+    validation_dataset.data = data_train_val.data[validation_start_index:]
+    validation_dataset.targets = data_train_val.targets[validation_start_index:]
+    data_train_val.data = data_train_val.data[:validation_start_index]
+    data_train_val.targets = data_train_val.targets[:validation_start_index]
+    data_test = MNIST(root='./data', train=False, download=True, transform=transform)
+    train_dataloader, _, test_dataloader = get_dataloaders(data_train_val, data_test,
                            seed=seed,
                            batch_size_train=batch_size_train,
                            batch_size_test=batch_size_test,
                            train_size=train_size,
-                           val_size=val_size,
+                           val_size=None,
                            shuffle=shuffle
                            )
+    val_dataloader = DataLoader(validation_dataset, shuffle=False, batch_size=batch_size_train)
+    return train_dataloader, val_dataloader, test_dataloader
 
 
 def get_omniglot_loaders(
@@ -85,16 +95,31 @@ def get_cifar_10_loaders(
         seed=None,
         shuffle: bool = True
 ):
-    data_train_val = CIFAR10(root='./', train=True, download=True)
-    data_test = CIFAR10(root='./', train=False, download=True)
-    return get_dataloaders(data_train_val, data_test,
-                           seed=seed,
-                           batch_size_train=batch_size_train,
-                           batch_size_test=batch_size_test,
-                           train_size=train_size,
-                           val_size=val_size,
-                           shuffle=shuffle
-                           )
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+    ])
+    data_train_val: datasets.cifar.CIFAR10 = CIFAR10(root='./data', train=True, download=True, transform=transform)
+    validation_size = 10000
+    validation_start_index = len(data_train_val) - validation_size
+    validation_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
+    validation_dataset.data = data_train_val.data[validation_start_index:]
+    validation_dataset.targets = data_train_val.targets[validation_start_index:]
+    data_train_val.data = data_train_val.data[:validation_start_index]
+    data_train_val.targets = data_train_val.targets[:validation_start_index]
+    data_test = CIFAR10(root='./data', train=False, download=True, transform=transform)
+    train_dataloader, _, test_dataloader = get_dataloaders(data_train_val, data_test,
+                                                           seed=seed,
+                                                           batch_size_train=batch_size_train,
+                                                           batch_size_test=batch_size_test,
+                                                           train_size=train_size,
+                                                           val_size=None,
+                                                           shuffle=shuffle
+                                                           )
+    val_dataloader = DataLoader(validation_dataset, shuffle=False, batch_size=batch_size_train)
+    return train_dataloader, val_dataloader, test_dataloader
+
+
+
 
 
 def get_svhn_loaders(
@@ -105,17 +130,17 @@ def get_svhn_loaders(
         seed=None,
         shuffle: bool = True
 ):
-    data_train_val = SVHN(root='./', split='train', download=True)
-    data_val =  SVHN(root='./', split='extra', download=True)
-    data_test = SVHN(root='./', split='test', download=True)
-    train_dataloader, _, test_dataloader =  get_dataloaders(data_train_val, data_test,
-                           seed=seed,
-                           batch_size_train=batch_size_train,
-                           batch_size_test=batch_size_test,
-                           train_size=train_size,
-                           val_size=None,
-                           shuffle=shuffle
-                           )
+    data_train_val = SVHN(root='./data', split='train', download=True)
+    data_val = SVHN(root='./data', split='extra', download=True)
+    data_test = SVHN(root='./data', split='test', download=True)
+    train_dataloader, _, test_dataloader = get_dataloaders(data_train_val, data_test,
+                                                           seed=seed,
+                                                           batch_size_train=batch_size_train,
+                                                           batch_size_test=batch_size_test,
+                                                           train_size=train_size,
+                                                           val_size=None,
+                                                           shuffle=shuffle
+                                                           )
     val_dataloader = DataLoader(data_val, batch_size=batch_size_train, shuffle=False)
     return train_dataloader, val_dataloader, test_dataloader
 
@@ -128,9 +153,9 @@ def get_celabA_loaders(
         seed=None,
         shuffle: bool = True
 ):
-    data_train = CelebA(root='./', split='train', download=True)
-    data_val = CelebA(root='./', split='valid', download=True)
-    data_test = CelebA(root='./', split='test', download=True)
+    data_train = CelebA(root='./data', split='train', download=True)
+    data_val = CelebA(root='./data', split='valid', download=True)
+    data_test = CelebA(root='./data', split='test', download=True)
     train_dataloader, _, test_dataloader = get_dataloaders(data_train, data_test,
                                                            seed=seed,
                                                            batch_size_train=batch_size_train,
@@ -142,6 +167,7 @@ def get_celabA_loaders(
     val_dataloader = DataLoader(data_val, batch_size=batch_size_train, shuffle=False)
     return train_dataloader, val_dataloader, test_dataloader
 
+
 def get_yahoo_loaders(
         batch_size_train: int = 32,
         batch_size_test: int = 1,
@@ -152,7 +178,3 @@ def get_yahoo_loaders(
 ):
     raise NotImplementedError('Yahoo dataset not found yet')
 
-
-
-if __name__ == '__main__':
-    get_mnist_binary_static_loaders()

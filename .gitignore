@@ -166,7 +166,10 @@ cython_debug/
 *.pkl
 .vscode
 
-
+datasets/data
+datasets/data/*
+trainers/data
+trainers/data/*
 # datasets
 datasets/MNIST
 datasets/omniglot-py
