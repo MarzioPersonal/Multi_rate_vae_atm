@@ -1,10 +1,8 @@
 import torch
 import torch.nn as nn
 
-from loss_function.loss import FixedBetaVaeLoss, VariateBetaVaeLoss
 from layers.MultiRateConvolution import MultiRateConv2d, MultiRateConvTranspose2d
 from layers.MultiRateSequential import MultiRateSequential, ModifiedSequential
-from distributions.beta_distribution import BetaUniform
 
 
 # def test_shape(input_p, in_channels, latent_dim, is_cifar, is_celeba):
