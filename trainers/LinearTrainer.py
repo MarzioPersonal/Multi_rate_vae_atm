@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 
 from datasets.utils_datasets import get_mnist_binary_static_loaders
 from models.linearVae import LinearVae
-from loss_function.loss import gaussian_vae_loss, GaussianVAELoss
+from loss_function.loss import GaussianVAELoss
 from distributions.beta_distribution import BetaUniform
 from learning_scheduler.WarmupCosineLearningRateScheduler import WarmupCosineDecayScheduler
 
@@ -93,10 +93,11 @@ class LinearTrainer:
         losses = 0
         with torch.no_grad():
             for inputs, _ in self.test_loader:
+                inputs = inputs.to(DEVICE)
                 if self.use_multi_rate:
-                    beta_in = torch.ones(size=(inputs.shape[0], 1), device=DEVICE) * beta_in
-                x_pred, (mu, logvar) = self.model.forward(inputs.to(DEVICE), beta_in)
-                loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred.to(DEVICE), inputs.to(DEVICE), mu.to(DEVICE), logvar.to(DEVICE), beta_loss)
+                    beta_in = torch.tensor([[beta_in]], dtype=torch.float32 , device=DEVICE) 
+                x_pred, (mu, logvar) = self.model.forward(inputs, beta_in)
+                loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss)
                 rec_losses += rec_loss
                 kdl_losses += kdl_loss
                 losses += loss.item()
