@@ -11,7 +11,7 @@ from loss_function.loss import gaussian_vae_loss
 from distributions.beta_distribution import BetaUniform
 from learning_scheduler.WarmupCosineLearningRateScheduler import WarmupCosineDecayScheduler
 
-DEVICE = torch.device('cpu')
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 import os
 
 
