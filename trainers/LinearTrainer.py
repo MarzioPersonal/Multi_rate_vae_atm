@@ -41,6 +41,7 @@ class LinearTrainer:
         if self.use_multi_rate:
             with torch.no_grad():
                 beta = self.beta_distribution.sample(sample_shape=torch.Size((batch_size, 1)))
+                beta = beta.to(DEVICE)
                 # normalize
             return beta
         return self.beta
@@ -70,7 +71,7 @@ class LinearTrainer:
             for inputs, _ in self.val_loader:
                 if self.use_multi_rate:
                     beta = torch.ones(size=(inputs.shape[0], 1))
-                    beta = torch.log(beta)
+                    beta = torch.log(beta).to(DEVICE)
                     beta_loss = 1.
                 else:
                     beta = self.beta
@@ -89,6 +90,7 @@ class LinearTrainer:
             for inputs, _ in self.test_loader:
                 if self.use_multi_rate:
                     beta_in = torch.ones(inputs.shape[0], 1) * beta_in
+                    beta_in.to(DEVICE)
                 x_pred, (mu, logvar) = self.model.forward(inputs, beta_in)
                 loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss)
                 rec_losses += rec_loss
