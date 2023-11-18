@@ -99,18 +99,27 @@ def get_cifar_10_loaders(
         seed=None,
         shuffle: bool = True
 ):
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-    ])
-    data_train_val: datasets.cifar.CIFAR10 = CIFAR10(root='./data', train=True, download=True, transform=transform)
+    data_train_val: datasets.cifar.CIFAR10 = CIFAR10(root='./data', train=True, download=True)
     validation_size = 10000
     validation_start_index = len(data_train_val) - validation_size
-    validation_dataset = datasets.CIFAR10(root='./data', train=True, download=True, transform=transform)
+    validation_dataset = datasets.CIFAR10(root='./data', train=True, download=True)
     validation_dataset.data = data_train_val.data[validation_start_index:]
     validation_dataset.targets = data_train_val.targets[validation_start_index:]
     data_train_val.data = data_train_val.data[:validation_start_index]
     data_train_val.targets = data_train_val.targets[:validation_start_index]
-    data_test = CIFAR10(root='./data', train=False, download=True, transform=transform)
+    data_test = CIFAR10(root='./data', train=False, download=True)
+
+    mean = data_train_val.data.mean(axis=(0, 1, 2)) / 255
+    std = data_train_val.data.std(axis=(0, 1, 2)) / 255
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
+
+    data_train_val.transform = transform
+    validation_dataset.transform = transform
+    data_test.transform = transform
+
     train_dataloader, _, test_dataloader = get_dataloaders(data_train_val, data_test,
                                                            seed=seed,
                                                            batch_size_train=batch_size_train,
@@ -137,6 +146,18 @@ def get_svhn_loaders(
     data_train_val = SVHN(root='./data', split='train', download=True)
     data_val = SVHN(root='./data', split='extra', download=True)
     data_test = SVHN(root='./data', split='test', download=True)
+
+    mean = data_train_val.data.mean(axis=(0, 1, 2)) / 255
+    std = data_train_val.data.std(axis=(0, 1, 2)) / 255
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
+
+    data_train_val.transform = transform
+    data_val.transform = transform
+    data_test.transform = transform
+
     train_dataloader, _, test_dataloader = get_dataloaders(data_train_val, data_test,
                                                            seed=seed,
                                                            batch_size_train=batch_size_train,
@@ -160,6 +181,18 @@ def get_celabA_loaders(
     data_train = CelebA(root='./data', split='train', download=True)
     data_val = CelebA(root='./data', split='valid', download=True)
     data_test = CelebA(root='./data', split='test', download=True)
+
+    mean = data_train.data.mean(axis=(0, 1, 2)) / 255
+    std = data_train.data.std(axis=(0, 1, 2)) / 255
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean, std)
+    ])
+
+    data_train.transform = transform
+    data_val.transform = transform
+    data_test.transform = transform
+
     train_dataloader, _, test_dataloader = get_dataloaders(data_train, data_test,
                                                            seed=seed,
                                                            batch_size_train=batch_size_train,

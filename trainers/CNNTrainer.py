@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 from datasets.utils_datasets import get_mnist_binary_static_loaders
 from models.resnet_vae import ResNetVae
 from models.cnn_vae import CnnVae
-from loss_function.loss import GaussianVAELoss, vae_loss
+from loss_function.loss import GaussianVAELoss, NonGaussianVAELoss
 from distributions.beta_distribution import BetaUniform
 from learning_scheduler.WarmupCosineLearningRateScheduler import WarmupCosineDecayScheduler
 
@@ -34,7 +34,7 @@ class CNNTrainer:
         self.train_loader, self.val_loader, self.test_loader = loaders
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         # self.loss_fn = GaussianVAELoss().to(DEVICE)
-        self.loss_fn = vae_loss
+        self.loss_fn = NonGaussianVAELoss().to(DEVICE)
         self.use_multi_rate = use_multi_rate
         if use_multi_rate:
             self.name = f'mrvae_{lr}_{1.}'
