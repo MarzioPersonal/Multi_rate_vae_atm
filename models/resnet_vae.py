@@ -168,23 +168,23 @@ class ResNetVae(nn.Module):
         eps = torch.randn_like(std)
         return mu + eps * std, eps
 
-# if __name__ == '__main__':
-#     input_mnist = torch.randn(size=(32, 1, 28, 28))
-#     input_cifar = torch.randn(size=(32, 3, 32, 32))
-#     input_celeb = torch.randn(size=(32, 3, 64, 64))
-#     latent_dim = 32
-#     # MINST
-#     print('MNIST')
-#     model = ResNetVae(latent_dimension=32)
-#     input_mnist_p, *_ = model.forward(input_mnist, beta=None)
-#     assert input_mnist_p.shape == input_mnist.shape
-#     # CIFAR
-#     print('CIFAR')
-#     model = ResNetVae(latent_dimension=32, is_cifar=True)
-#     input_cifar_p, *_ = model.forward(input_cifar, beta=None)
-#     assert input_cifar_p.shape == input_cifar.shape
-#     # CELEBA
-#     print('CELEBA')
-#     model = ResNetVae(latent_dimension=32, is_celeba=True)
-#     input_celeb_p, *_ = model.forward(input_celeb, beta=None)
-#     assert input_celeb_p.shape == input_celeb.shape
+if __name__ == '__main__':
+    input_mnist = torch.randn(size=(32, 1, 28, 28))
+    input_cifar = torch.randn(size=(32, 3, 32, 32))
+    input_celeb = torch.randn(size=(32, 3, 64, 64))
+    latent_dim = 32
+    # MINST
+    print('MNIST')
+    model = ResNetVae(latent_dimension=32)
+    input_mnist_p, *_ = model.forward(input_mnist, beta=None)
+    assert input_mnist_p.shape == input_mnist.shape
+    # CIFAR
+    print('CIFAR')
+    model = ResNetVae(latent_dimension=32, is_cifar=True)
+    input_cifar_p, *_ = model.forward(input_cifar, beta=None)
+    assert input_cifar_p.shape == input_cifar.shape
+    # CELEBA
+    print('CELEBA')
+    model = ResNetVae(latent_dimension=32, is_celeba=True)
+    input_celeb_p, *_ = model.forward(input_celeb, beta=None)
+    assert input_celeb_p.shape == input_celeb.shape
