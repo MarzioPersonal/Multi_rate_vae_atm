@@ -17,5 +17,5 @@ class DecoderActivation(nn.Module):
         super().__init__(*args, **kwargs)
 
     def forward(self, x):
-        # for the encoder sigma is  = ReLU(1-exp(x))^(1/2)
-        return torch.sqrt(nn.functional.relu(1 - torch.exp(x)))
+        # for the decoder sigma is  = ReLU(1-exp(x))^(1/2)
+        return torch.sqrt(nn.functional.relu(1. - torch.exp(x)))

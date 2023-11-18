@@ -20,6 +20,8 @@ class MRVAELayer(nn.Module):
         return scale * inputs
 
 
+
+
 class EncoderMRVAELayer(MRVAELayer):
     def __init__(self, features: int) -> None:
         super().__init__(features, EncoderActivation())

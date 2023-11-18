@@ -5,7 +5,6 @@ import torch
 import torch.optim as optim
 import matplotlib.pyplot as plt
 
-from datasets.utils_datasets import get_mnist_binary_static_loaders
 from models.linearVae import LinearVae
 from loss_function.loss import GaussianVAELoss
 from distributions.beta_distribution import BetaUniform
@@ -75,7 +74,7 @@ class LinearTrainer:
             for inputs, _ in self.val_loader:
                 inputs = inputs.to(DEVICE)
                 if self.use_multi_rate:
-                    beta = torch.ones(size=(inputs.shape[0], 1), device=DEVICE)
+                    beta = torch.ones(size=(inputs.shape[0], 1), device=DEVICE, dtype=torch.float32)
                     beta = torch.log(beta)
                     beta_loss = 1.
                 else:
@@ -91,19 +90,20 @@ class LinearTrainer:
         rec_losses = 0
         kdl_losses = 0
         losses = 0
+        self.model.eval()
         with torch.no_grad():
-            for inputs, _ in self.test_loader:
+            for inputs, _ in self.train_loader:
                 inputs = inputs.to(DEVICE)
                 if self.use_multi_rate:
-                    beta_in = torch.tensor([[beta_in]], dtype=torch.float32 , device=DEVICE) 
-                x_pred, (mu, logvar) = self.model.forward(inputs, beta_in)
+                    beta_in_el = torch.full(size=(inputs.shape[0], 1), fill_value=beta_in, device=DEVICE, dtype=torch.float32)
+                x_pred, (mu, logvar) = self.model.forward(inputs, beta_in_el)
                 loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss)
                 rec_losses += rec_loss
                 kdl_losses += kdl_loss
                 losses += loss.item()
-        losses = losses / len(self.test_loader)
-        kdl_losses = kdl_losses / len(self.test_loader)
-        rec_losses = rec_losses / len(self.test_loader)
+        losses = losses / len(self.train_loader)
+        kdl_losses = kdl_losses / len(self.train_loader)
+        rec_losses = rec_losses / len(self.train_loader)
         return losses, (rec_losses, kdl_losses)
 
     # def save_model(self, path: str):
