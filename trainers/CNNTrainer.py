@@ -212,15 +212,17 @@ class GridSearcher:
 
         return pd.concat(self.dfs_mr_vae)
 
-    def conduct_experiment(self, path='experiment_1', do_only_mrvae=False):
+    def conduct_experiment(self, path='experiment_1', do_only_mrvae=False, model='resnet'):
         print("Using device:", DEVICE)
         if not os.path.exists(path):
             os.mkdir(path)
+        if not os.path.exists(f'{path}/{model}'):
+            os.mkdir(f'{path}/{model}')
         if not do_only_mrvae:
             df_beta_vae = self.b_vae_()
             df_mr_vae = self.mr_vae_()
-            df_beta_vae.to_csv(f'{path}/beta_vae.csv')
-            df_mr_vae.to_csv(f'{path}/mr_vae.csv')
+            df_beta_vae.to_csv(f'{path}/{model}/beta_vae.csv')
+            df_mr_vae.to_csv(f'{path}/{model}/mr_vae.csv')
         else:
             df_mr_vae = self.mr_vae_()
-            df_mr_vae.to_csv(f'{path}/mr_vae.csv')
+            df_mr_vae.to_csv(f'{path}/{model}/mr_vae.csv')
