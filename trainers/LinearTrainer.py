@@ -59,7 +59,10 @@ class LinearTrainer:
                 log_betas = self.sample_beta(batch_size=inputs.shape[0])
                 self.optimizer.zero_grad()
                 x_pred, (mu, logvar) = self.model.forward(inputs, log_betas)
-                loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta)
+                if self.use_multi_rate:
+                    loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, torch.exp(log_betas).squeeze(-1))
+                else:
+                    loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta)
                 loss.backward()
                 self.optimizer.step()
 
@@ -75,8 +78,8 @@ class LinearTrainer:
                 inputs = inputs.to(DEVICE)
                 if self.use_multi_rate:
                     beta = torch.ones(size=(inputs.shape[0], 1), device=DEVICE, dtype=torch.float32)
+                    beta_loss = beta.squeeze(-1)
                     beta = torch.log(beta)
-                    beta_loss = 1.
                 else:
                     beta = self.beta
                     beta_loss = beta
@@ -92,18 +95,22 @@ class LinearTrainer:
         losses = 0
         self.model.eval()
         with torch.no_grad():
-            for inputs, _ in self.train_loader:
+            for inputs, _ in self.val_loader:
                 inputs = inputs.to(DEVICE)
                 if self.use_multi_rate:
                     beta_in_el = torch.full(size=(inputs.shape[0], 1), fill_value=beta_in, device=DEVICE, dtype=torch.float32)
+                    beta_loss_el = torch.exp(beta_in_el).squeeze(-1)
+                else:
+                    beta_in_el = beta_in
+                    beta_loss_el = beta_loss
                 x_pred, (mu, logvar) = self.model.forward(inputs, beta_in_el)
-                loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss)
+                loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss_el)
                 rec_losses += rec_loss
                 kdl_losses += kdl_loss
                 losses += loss.item()
-        losses = losses / len(self.train_loader)
-        kdl_losses = kdl_losses / len(self.train_loader)
-        rec_losses = rec_losses / len(self.train_loader)
+        losses = losses / len(self.val_loader)
+        kdl_losses = kdl_losses / len(self.val_loader)
+        rec_losses = rec_losses / len(self.val_loader)
         return losses, (rec_losses, kdl_losses)
 
     # def save_model(self, path: str):
@@ -180,10 +187,14 @@ class GridSearcher:
 
         return pd.concat(self.dfs_mr_vae)
 
-    def conduct_experiment(self, path='experiment_1'):
+    def conduct_experiment(self, path='experiment_1', do_only_mrvae=False):
         if not os.path.exists(path):
             os.mkdir(path)
-        df_beta_vae = self.b_vae_()
-        df_mr_vae = self.mr_vae_()
-        df_beta_vae.to_csv(f'{path}/beta_vae.csv')
-        df_mr_vae.to_csv(f'{path}/mr_vae.csv')
+        if not do_only_mrvae:
+            df_beta_vae = self.b_vae_()
+            df_mr_vae = self.mr_vae_()
+            df_beta_vae.to_csv(f'{path}/beta_vae.csv')
+            df_mr_vae.to_csv(f'{path}/mr_vae.csv')
+        else:
+            df_mr_vae = self.mr_vae_()
+            df_mr_vae.to_csv(f'{path}/mr_vae.csv')
