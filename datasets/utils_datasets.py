@@ -71,6 +71,7 @@ def get_mnist_binary_static_loaders(
     return train_dataloader, val_dataloader, test_dataloader
 
 
+# splitting of data not specified
 def get_omniglot_loaders(
         batch_size_train: int = 32,
         batch_size_test: int = 1,
@@ -79,8 +80,11 @@ def get_omniglot_loaders(
         seed=None,
         shuffle: bool = True
 ):
-    data_train_val = Omniglot(root='./', background=True, download=True)
-    data_test = Omniglot(root='./', background=False, download=True)
+    transform = transforms.Compose([
+        transforms.ToTensor()
+    ])
+    data_train_val = Omniglot(root='./', background=True, download=True, transform=transform)
+    data_test = Omniglot(root='./', background=False, download=True, transform=transform)
     return get_dataloaders(data_train_val, data_test,
                            seed=seed,
                            batch_size_train=batch_size_train,
@@ -214,4 +218,3 @@ def get_yahoo_loaders(
         shuffle: bool = True
 ):
     raise NotImplementedError('Yahoo dataset not found yet')
-
