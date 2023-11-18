@@ -144,7 +144,7 @@ class CNNTrainer:
 
 class GridSearcher:
     def __init__(self, loaders, resnet=False, is_cifar=False, is_celeba=False):
-        assert is_cifar and is_celeba, f'Cannot be both cifar and celeba'
+        assert not (is_cifar == True == is_celeba), f'Cannot be both cifar and celeba {is_cifar} {is_celeba}'
         self.lrs = [0.01, 0.003, 0.001, 0.0003, 0.0001, 0.00003, 0.00001]
         # self.betas = np.linspace(np.log(0.01), np.log(10), num=10)
         self.betas = np.array([np.log(1)])
