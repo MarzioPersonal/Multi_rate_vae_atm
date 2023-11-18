@@ -51,6 +51,9 @@ class CNNTrainer:
             total_epochs=epochs
         )
 
+        self.best_loss = np.inf
+        self.val_counter = 0
+
     def sample_beta(self, batch_size=0):
         if self.use_multi_rate:
             with torch.no_grad():
@@ -71,12 +74,28 @@ class CNNTrainer:
                 log_betas = self.sample_beta(batch_size=inputs.shape[0])
                 self.optimizer.zero_grad()
                 x_pred, (mu, logvar) = self.model.forward(inputs, log_betas)
-                loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta)
+                if self.use_multi_rate:
+                    loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, torch.exp(log_betas).squeeze(-1))
+                else:
+                    loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta)
                 loss.backward()
                 self.optimizer.step()
 
                 ep_loss += loss.item()
             self.scheduler.step()
+
+            # early stopping
+            val_loss = self.best_on_validation()
+            if val_loss < self.best_loss:
+                self.best_loss = val_loss
+                self.val_counter = 0
+            else:
+                self.val_counter += 1
+                if self.val_counter >= 10:
+                    print('Early stopping at epoch:', ep + 1)
+                    break
+
+
             # print(f'Ep {ep + 1}; loss:{ep_loss / len(self.train_loader)}')
 
     def best_on_validation(self):
@@ -86,9 +105,9 @@ class CNNTrainer:
             for inputs, _ in self.val_loader:
                 inputs = inputs.to(DEVICE)
                 if self.use_multi_rate:
-                    beta = torch.ones(size=(inputs.shape[0], 1), device=DEVICE)
+                    beta = torch.ones(size=(inputs.shape[0], 1), device=DEVICE, dtype=torch.float32)
+                    beta_loss = beta.squeeze(-1)
                     beta = torch.log(beta)
-                    beta_loss = 1.
                 else:
                     beta = self.beta
                     beta_loss = beta
@@ -99,27 +118,33 @@ class CNNTrainer:
         return train_loss
 
     def rate_distortion_curve_value(self, beta_in: float, beta_loss: float):
-        rec_losses = 0
-        kdl_losses = 0
+        rates = 0
+        distortions = 0
         losses = 0
+        self.model.eval()
         with torch.no_grad():
-            for inputs, _ in self.test_loader:
+            for inputs, _ in self.val_loader:
                 inputs = inputs.to(DEVICE)
                 if self.use_multi_rate:
-                    beta_in = torch.tensor([[beta_in]], dtype=torch.float32, device=DEVICE)
-                x_pred, (mu, logvar) = self.model.forward(inputs, beta_in)
-                loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss)
-                rec_losses += rec_loss
-                kdl_losses += kdl_loss
+                    beta_in_el = torch.full(size=(inputs.shape[0], 1), fill_value=beta_in, device=DEVICE, dtype=torch.float32)
+                    beta_loss_el = torch.exp(beta_in_el).squeeze(-1)
+                else:
+                    beta_in_el = beta_in
+                    beta_loss_el = beta_loss
+                x_pred, (mu, logvar) = self.model.forward(inputs, beta_in_el)
+                loss, (rate, distortion) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss_el)
+                rates += rate
+                distortions += distortion
                 losses += loss.item()
-        losses = losses / len(self.test_loader)
-        kdl_losses = kdl_losses / len(self.test_loader)
-        rec_losses = rec_losses / len(self.test_loader)
-        return losses, (rec_losses, kdl_losses)
+        losses = losses / len(self.val_loader)
+        rates = rates / len(self.val_loader)
+        distortions = distortions / len(self.val_loader)
+        return losses, (rates, distortions)
 
 
 class GridSearcher:
     def __init__(self, loaders, resnet=False, is_cifar=False, is_celeba=False):
+        assert is_cifar and is_celeba, f'Cannot be both cifar and celeba'
         self.lrs = [0.01, 0.003, 0.001, 0.0003, 0.0001, 0.00003, 0.00001]
         # self.betas = np.linspace(np.log(0.01), np.log(10), num=10)
         self.betas = np.array([np.log(1)])
@@ -187,11 +212,15 @@ class GridSearcher:
 
         return pd.concat(self.dfs_mr_vae)
 
-    def conduct_experiment(self, path='experiment_1'):
+    def conduct_experiment(self, path='experiment_1', do_only_mrvae=False):
         print("Using device:", DEVICE)
         if not os.path.exists(path):
             os.mkdir(path)
-        df_beta_vae = self.b_vae_()
-        df_mr_vae = self.mr_vae_()
-        df_beta_vae.to_csv(f'{path}/beta_vae.csv')
-        df_mr_vae.to_csv(f'{path}/mr_vae.csv')
+        if not do_only_mrvae:
+            df_beta_vae = self.b_vae_()
+            df_mr_vae = self.mr_vae_()
+            df_beta_vae.to_csv(f'{path}/beta_vae.csv')
+            df_mr_vae.to_csv(f'{path}/mr_vae.csv')
+        else:
+            df_mr_vae = self.mr_vae_()
+            df_mr_vae.to_csv(f'{path}/mr_vae.csv')

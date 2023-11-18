@@ -90,8 +90,8 @@ class LinearTrainer:
         return train_loss
 
     def rate_distortion_curve_value(self, beta_in: float, beta_loss: float):
-        rec_losses = 0
-        kdl_losses = 0
+        rates = 0
+        distortions = 0
         losses = 0
         self.model.eval()
         with torch.no_grad():
@@ -104,14 +104,14 @@ class LinearTrainer:
                     beta_in_el = beta_in
                     beta_loss_el = beta_loss
                 x_pred, (mu, logvar) = self.model.forward(inputs, beta_in_el)
-                loss, (rec_loss, kdl_loss) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss_el)
-                rec_losses += rec_loss
-                kdl_losses += kdl_loss
+                loss, (rate, distortion) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss_el)
+                rates += rate
+                distortions += distortion
                 losses += loss.item()
         losses = losses / len(self.val_loader)
-        kdl_losses = kdl_losses / len(self.val_loader)
-        rec_losses = rec_losses / len(self.val_loader)
-        return losses, (rec_losses, kdl_losses)
+        rates = rates / len(self.val_loader)
+        distortions = distortions / len(self.val_loader)
+        return losses, (rates, distortions)
 
     # def save_model(self, path: str):
     #     if not path.endswith('model'):
