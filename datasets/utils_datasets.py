@@ -23,10 +23,10 @@ def get_dataloaders(train_dataset,
             assert train_size + val_size == 1, f'train_size and val_size must sum up to 1, found {train_size} and {val_size}'
         dataset_train, dataset_val = torch.utils.data.random_split(train_dataset, lengths=[train_size, val_size],
                                                                    generator=generator)
-        train_dataloader = DataLoader(dataset_train, shuffle=shuffle, batch_size=batch_size_train, num_workers=8, pin_memory=True)
+        train_dataloader = DataLoader(dataset_train, shuffle=shuffle, batch_size=batch_size_train, num_workers=2, pin_memory=True)
         val_dataloader = DataLoader(dataset_val, shuffle=False, batch_size=batch_size_train, num_workers=2,pin_memory=True)
     else:
-        train_dataloader = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size_train,num_workers=8, pin_memory=True)
+        train_dataloader = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size_train,num_workers=2, pin_memory=True)
         val_dataloader = None
     test_dataloader = DataLoader(test_dataset, shuffle=False, batch_size=batch_size_test, num_workers=2, pin_memory=True)
     return train_dataloader, val_dataloader, test_dataloader
@@ -45,7 +45,8 @@ def get_mnist_binary_static_loaders(
 ) -> tuple[DataLoader, DataLoader | None, DataLoader]:
     transform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Lambda(lambda x: binarize_image(x))
+        binarize_image,
+        # transforms.Lambda(lambda x: binarize_image(x))
         # transforms.Normalize((0.1307,), (0.3081,)),
         # lambda x: x >= 0.1307,
         # lambda x: x.float()

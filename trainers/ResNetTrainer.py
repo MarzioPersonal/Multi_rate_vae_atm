@@ -28,7 +28,7 @@ class ResNetTrainer:
         self.train_loader, self.val_loader, self.test_loader = loaders
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         # images are binary
-        self.loss_fn = GaussianVAELoss().to(DEVICE)
+        self.loss_fn = NonGaussianVAELoss().to(DEVICE)
 
         self.name = f'mrvae_{lr}_{1.}'
         self.beta_distribution = Uniform(low=np.log(a), high=np.log(b))
@@ -136,9 +136,9 @@ class ExperimentThree:
                 mean_tr = []
                 for seed in self.seeds:
                     torch.manual_seed(seed)
-                    model = ResNetTrainer(loaders, a, b, lr=lr)
-                    model.train()
-                    mean_tr.append(model.best_on_validation())
+                    trainer = ResNetTrainer(loaders, a, b, lr=lr)
+                    trainer.train()
+                    mean_tr.append(trainer.best_on_validation())
                 dictionary = {
                     'a': a,
                     'b': b,
@@ -156,9 +156,9 @@ class ExperimentThree:
                 mean_tr = []
                 for seed in self.seeds:
                     torch.manual_seed(seed)
-                    model = ResNetTrainer(loaders, a, b, lr=lr)
-                    model.train()
-                    mean_tr.append(model.best_on_validation())
+                    trainer = ResNetTrainer(loaders, a, b, lr=lr)
+                    trainer.train()
+                    mean_tr.append(trainer.best_on_validation())
                 dictionary = {
                     'a': a,
                     'b': b,
@@ -169,6 +169,7 @@ class ExperimentThree:
         return pd.concat(self.dfs_alpha_fixed)
 
     def conduct_experiment(self, loaders, path='experiment_3'):
+        print('Using device:', DEVICE)
         if len(path.split('/')) > 1:
             tmp_path = path.split('/')[0]
             if not os.path.exists(tmp_path):
