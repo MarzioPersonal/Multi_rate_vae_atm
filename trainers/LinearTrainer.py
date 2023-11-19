@@ -39,6 +39,9 @@ class LinearTrainer:
             total_epochs=epochs
         )
 
+        self.best_loss = np.inf
+        self.val_counter = 0
+
     def sample_beta(self, batch_size=0):
         if self.use_multi_rate:
             with torch.no_grad():
@@ -68,6 +71,16 @@ class LinearTrainer:
 
                 ep_loss += loss.item()
             self.scheduler.step()
+            val_loss = self.best_on_validation()
+            if val_loss < self.best_loss:
+                self.best_loss = val_loss
+                self.val_counter = 0
+            else:
+                self.val_counter += 1
+                if self.val_counter >= 40:
+                    print('Early stopping at epoch:', ep + 1)
+                    break
+        return self.best_loss
             # print(f'Ep {ep + 1}; loss:{ep_loss / len(self.train_loader)}')
 
     def best_on_validation(self):
@@ -95,7 +108,7 @@ class LinearTrainer:
         losses = 0
         self.model.eval()
         with torch.no_grad():
-            for inputs, _ in self.val_loader:
+            for inputs, _ in self.test_loader:
                 inputs = inputs.to(DEVICE)
                 if self.use_multi_rate:
                     beta_in_el = torch.full(size=(inputs.shape[0], 1), fill_value=beta_in, device=DEVICE, dtype=torch.float32)
@@ -108,9 +121,9 @@ class LinearTrainer:
                 rates += rate
                 distortions += distortion
                 losses += loss.item()
-        losses = losses / len(self.val_loader)
-        rates = rates / len(self.val_loader)
-        distortions = distortions / len(self.val_loader)
+        losses = losses / len(self.test_loader)
+        rates = rates / len(self.test_loader)
+        distortions = distortions / len(self.test_loader)
         return losses, (rates, distortions)
 
     # def save_model(self, path: str):
@@ -151,8 +164,8 @@ class GridSearcher:
                     torch.manual_seed(s)
                     np.random.seed(s)
                     tr = LinearTrainer(loaders=self.loaders, use_multi_rate=False, beta=b, lr=lr)
-                    tr.train()
-                    train_loss = tr.best_on_validation()
+
+                    train_loss = tr.train()
                     mean_tr.append(train_loss)
                 dictionary = {
                     'use_multi_rate': [use_multi_rate],
@@ -174,8 +187,8 @@ class GridSearcher:
                 torch.manual_seed(s)
                 np.random.seed(s)
                 tr = LinearTrainer(loaders=self.loaders, use_multi_rate=use_multi_rate, lr=lr)
-                tr.train()
-                train_loss = tr.best_on_validation()
+
+                train_loss = tr.train()
                 mean_tr.append(train_loss)
             dictionary = {
                 'use_multi_rate': [use_multi_rate],

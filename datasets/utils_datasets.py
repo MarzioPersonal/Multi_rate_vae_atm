@@ -64,7 +64,7 @@ def get_mnist_binary_static_loaders(
     train_dataloader, _, test_dataloader = get_dataloaders(data_train_val, data_test,
                            seed=seed,
                            batch_size_train=batch_size_train,
-                           batch_size_test=batch_size_test,
+                           batch_size_test=batch_size_train,
                            train_size=train_size,
                            val_size=None,
                            shuffle=shuffle
@@ -82,27 +82,25 @@ def get_omniglot_loaders(
         seed=None,
         shuffle: bool = True
 ):
-    def binarize_image(image):
+    def binarize_image_om(image):
         threshold = 1.
         return (image >= threshold).float()
     transform = transforms.Compose([
         transforms.Resize((28, 28), InterpolationMode.BICUBIC, antialias=True),
         transforms.ToTensor(),
-        binarize_image,
+        binarize_image_om,
     ])
     data_train_val = Omniglot(root='./', background=True, download=True, transform=transform)
     data_test = Omniglot(root='./', background=False, download=True, transform=transform)
-    val_dataloader = DataLoader(data_test, shuffle=False, batch_size=batch_size_train, num_workers=2,
-                                pin_memory=True)
-    train_loader, _, test_loader =  get_dataloaders(data_train_val, data_test,
+    return get_dataloaders(data_train_val, data_test,
                            seed=seed,
                            batch_size_train=batch_size_train,
-                           batch_size_test=batch_size_test,
-                           train_size=train_size,
-                           val_size=val_size,
+                           batch_size_test=batch_size_train,
+                           train_size=0.7,
+                           val_size=0.3,
                            shuffle=shuffle
                            )
-    return train_loader, val_dataloader, test_loader
+
 
 
 def get_cifar_10_loaders(
@@ -137,7 +135,7 @@ def get_cifar_10_loaders(
     train_dataloader, _, test_dataloader = get_dataloaders(data_train_val, data_test,
                                                            seed=seed,
                                                            batch_size_train=batch_size_train,
-                                                           batch_size_test=batch_size_test,
+                                                           batch_size_test=batch_size_train,
                                                            train_size=train_size,
                                                            val_size=None,
                                                            shuffle=shuffle
@@ -175,7 +173,7 @@ def get_svhn_loaders(
     train_dataloader, _, test_dataloader = get_dataloaders(data_train_val, data_test,
                                                            seed=seed,
                                                            batch_size_train=batch_size_train,
-                                                           batch_size_test=batch_size_test,
+                                                           batch_size_test=batch_size_train,
                                                            train_size=train_size,
                                                            val_size=None,
                                                            shuffle=shuffle
@@ -210,7 +208,7 @@ def get_celabA_loaders(
     train_dataloader, _, test_dataloader = get_dataloaders(data_train, data_test,
                                                            seed=seed,
                                                            batch_size_train=batch_size_train,
-                                                           batch_size_test=batch_size_test,
+                                                           batch_size_test=batch_size_train,
                                                            train_size=train_size,
                                                            val_size=None,
                                                            shuffle=shuffle

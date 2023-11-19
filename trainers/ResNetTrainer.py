@@ -19,7 +19,7 @@ from tqdm.notebook import tqdm
 class ResNetTrainer:
 
     def __init__(self, loaders: tuple, a: float, b: float, beta=1.,
-                 lr=1e-3, latent_dimension=32, warmup_phase=10, epochs=200, ):
+                 lr=1e-3, latent_dimension=32, warmup_phase=10, epochs=200):
 
         model = ResNetVae(latent_dimension=latent_dimension,
                           use_multi_rate=True)
@@ -71,15 +71,16 @@ class ResNetTrainer:
             self.scheduler.step()
 
             # early stopping
-            # val_loss = self.best_on_validation()
-            # if val_loss < self.best_loss:
-            #     self.best_loss = val_loss
-            #     self.val_counter = 0
-            # else:
-            #     self.val_counter += 1
-            #     if self.val_counter >= 30:
-            #         print('Early stopping at epoch:', ep + 1)
-            #         break
+            val_loss = self.best_on_validation()
+            if val_loss < self.best_loss:
+                self.best_loss = val_loss
+                self.val_counter = 0
+            else:
+                self.val_counter += 1
+                if self.val_counter >= 30:
+                    print('Early stopping at epoch:', ep + 1)
+                    break
+        return self.best_loss
 
             # print(f'Ep {ep + 1}; loss:{ep_loss / len(self.train_loader)}')
 
@@ -104,7 +105,7 @@ class ResNetTrainer:
         losses = 0
         self.model.eval()
         with torch.no_grad():
-            for inputs, _ in self.val_loader:
+            for inputs, _ in self.test_loader:
                 inputs = inputs.to(DEVICE)
                 beta_in_el = torch.full(size=(inputs.shape[0], 1), fill_value=beta_in, device=DEVICE,
                                         dtype=torch.float32)
@@ -114,9 +115,9 @@ class ResNetTrainer:
                 rates += rate
                 distortions += distortion
                 losses += loss.item()
-        losses = losses / len(self.val_loader)
-        rates = rates / len(self.val_loader)
-        distortions = distortions / len(self.val_loader)
+        losses = losses / len(self.test_loader)
+        rates = rates / len(self.test_loader)
+        distortions = distortions / len(self.test_loader)
         return losses, (rates, distortions)
 
 
@@ -136,9 +137,9 @@ class ExperimentThree:
                 mean_tr = []
                 for seed in self.seeds:
                     torch.manual_seed(seed)
-                    trainer = ResNetTrainer(loaders, a, b, lr=lr)
-                    trainer.train()
-                    mean_tr.append(trainer.best_on_validation())
+                    trainer = ResNetTrainer(loaders, a, b, lr=lr, latent_dimension=64)
+                    best_loss = trainer.train()
+                    mean_tr.append(best_loss)
                 dictionary = {
                     'a': a,
                     'b': b,
@@ -156,9 +157,9 @@ class ExperimentThree:
                 mean_tr = []
                 for seed in self.seeds:
                     torch.manual_seed(seed)
-                    trainer = ResNetTrainer(loaders, a, b, lr=lr)
-                    trainer.train()
-                    mean_tr.append(trainer.best_on_validation())
+                    trainer = ResNetTrainer(loaders, a, b, lr=lr, latent_dimension=64)
+                    best_loss = trainer.train()
+                    mean_tr.append(best_loss)
                 dictionary = {
                     'a': a,
                     'b': b,

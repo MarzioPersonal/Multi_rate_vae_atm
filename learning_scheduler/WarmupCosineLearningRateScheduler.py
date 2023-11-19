@@ -21,4 +21,19 @@ class WarmupCosineDecayScheduler(torch.optim.lr_scheduler.LRScheduler):
                     for base_lr in self.base_lrs]
 
 
-
+#
+# if __name__ == '__main__':
+#     # test and plot the learning rate schedule
+#     import matplotlib.pyplot as plt
+#     import numpy as np
+#     import torch.nn as nn
+#     import torch.optim as optim
+#     model = nn.Linear(10, 10)
+#     optimizer = optim.Adam(model.parameters(), lr=1e-5)
+#     scheduler = WarmupCosineDecayScheduler(optimizer, warmup_epochs=10, total_epochs=200)
+#     lrs = []
+#     for i in range(0, 200):
+#         scheduler.step()
+#         lrs.append(scheduler.get_lr()[0])
+#     plt.plot(np.arange(0, 200), lrs)
+#     plt.show()

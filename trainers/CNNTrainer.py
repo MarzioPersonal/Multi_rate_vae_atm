@@ -3,9 +3,7 @@ import pandas as pd
 import torch.nn
 import torch
 import torch.optim as optim
-import matplotlib.pyplot as plt
 
-from datasets.utils_datasets import get_mnist_binary_static_loaders
 from models.resnet_vae import ResNetVae
 from models.cnn_vae import CnnVae
 from loss_function.loss import GaussianVAELoss, NonGaussianVAELoss
@@ -85,15 +83,16 @@ class CNNTrainer:
             self.scheduler.step()
 
             # early stopping
-            # val_loss = self.best_on_validation()
-            # if val_loss < self.best_loss:
-            #     self.best_loss = val_loss
-            #     self.val_counter = 0
-            # else:
-            #     self.val_counter += 1
-            #     if self.val_counter >= 30:
-            #         print('Early stopping at epoch:', ep + 1)
-            #         break
+            val_loss = self.best_on_validation()
+            if val_loss < self.best_loss:
+                self.best_loss = val_loss
+                self.val_counter = 0
+            else:
+                self.val_counter += 1
+                if self.val_counter >= 40:
+                    print('Early stopping at epoch:', ep + 1)
+                    break
+        return self.best_loss
 
 
             # print(f'Ep {ep + 1}; loss:{ep_loss / len(self.train_loader)}')
@@ -123,7 +122,7 @@ class CNNTrainer:
         losses = 0
         self.model.eval()
         with torch.no_grad():
-            for inputs, _ in self.val_loader:
+            for inputs, _ in self.test_loader:
                 inputs = inputs.to(DEVICE)
                 if self.use_multi_rate:
                     beta_in_el = torch.full(size=(inputs.shape[0], 1), fill_value=beta_in, device=DEVICE, dtype=torch.float32)
@@ -136,15 +135,15 @@ class CNNTrainer:
                 rates += rate
                 distortions += distortion
                 losses += loss.item()
-        losses = losses / len(self.val_loader)
-        rates = rates / len(self.val_loader)
-        distortions = distortions / len(self.val_loader)
+        losses = losses / len(self.test_loader)
+        rates = rates / len(self.test_loader)
+        distortions = distortions / len(self.test_loader)
         return losses, (rates, distortions)
 
 
 class GridSearcher:
     def __init__(self, loaders, resnet=False, is_cifar=False, is_celeba=False):
-        assert not (is_cifar == True == is_celeba), f'Cannot be both cifar and celeba {is_cifar} {is_celeba}'
+        assert not (is_cifar and is_celeba), f'Cannot be both cifar and celeba {is_cifar} {is_celeba}'
         self.lrs = [0.01, 0.003, 0.001, 0.0003, 0.0001, 0.00003, 0.00001]
         # self.betas = np.linspace(np.log(0.01), np.log(10), num=10)
         self.betas = np.array([np.log(1)])
@@ -173,9 +172,9 @@ class GridSearcher:
                     np.random.seed(s)
                     tr = CNNTrainer(loaders=self.loaders, use_multi_rate=False, beta=b, lr=lr,
                                     is_celeba=self.is_celeba,
-                                    is_cifar=self.is_cifar, resnet=self.resnet)
-                    tr.train()
-                    train_loss = tr.best_on_validation()
+                                    is_cifar=self.is_cifar, resnet=self.resnet, latent_dimension=64)
+
+                    train_loss = tr.train()
                     mean_tr.append(train_loss)
                 dictionary = {
                     'use_multi_rate': [use_multi_rate],
@@ -198,9 +197,8 @@ class GridSearcher:
                 np.random.seed(s)
                 tr = CNNTrainer(loaders=self.loaders, use_multi_rate=use_multi_rate, lr=lr,
                                 is_celeba=self.is_celeba,
-                                is_cifar=self.is_cifar, resnet=self.resnet)
-                tr.train()
-                train_loss = tr.best_on_validation()
+                                is_cifar=self.is_cifar, resnet=self.resnet, latent_dimension=64)
+                train_loss = tr.train()
                 mean_tr.append(train_loss)
             dictionary = {
                 'use_multi_rate': [use_multi_rate],
