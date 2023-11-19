@@ -3,6 +3,7 @@ import torchvision
 from torchvision.datasets import MNIST, Omniglot, CIFAR10, SVHN, CelebA
 from torchvision import transforms, datasets
 from torch.utils.data import DataLoader
+from torchvision.transforms import InterpolationMode
 
 
 def get_dataloaders(train_dataset,
@@ -80,8 +81,13 @@ def get_omniglot_loaders(
         seed=None,
         shuffle: bool = True
 ):
+    def binarize_image(image):
+        threshold = 1.
+        return (image >= threshold).float()
     transform = transforms.Compose([
-        transforms.ToTensor()
+        transforms.Resize((28, 28), InterpolationMode.BICUBIC, antialias=True),
+        transforms.ToTensor(),
+        binarize_image,
     ])
     data_train_val = Omniglot(root='./', background=True, download=True, transform=transform)
     data_test = Omniglot(root='./', background=False, download=True, transform=transform)
