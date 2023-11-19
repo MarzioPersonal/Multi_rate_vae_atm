@@ -24,11 +24,11 @@ def get_dataloaders(train_dataset,
         dataset_train, dataset_val = torch.utils.data.random_split(train_dataset, lengths=[train_size, val_size],
                                                                    generator=generator)
         train_dataloader = DataLoader(dataset_train, shuffle=shuffle, batch_size=batch_size_train, num_workers=8, pin_memory=True)
-        val_dataloader = DataLoader(dataset_val, shuffle=False, batch_size=batch_size_train, num_workers=8,pin_memory=True)
+        val_dataloader = DataLoader(dataset_val, shuffle=False, batch_size=batch_size_train, num_workers=2,pin_memory=True)
     else:
         train_dataloader = DataLoader(train_dataset, shuffle=shuffle, batch_size=batch_size_train,num_workers=8, pin_memory=True)
         val_dataloader = None
-    test_dataloader = DataLoader(test_dataset, shuffle=False, batch_size=batch_size_test, num_workers=8, pin_memory=True)
+    test_dataloader = DataLoader(test_dataset, shuffle=False, batch_size=batch_size_test, num_workers=2, pin_memory=True)
     return train_dataloader, val_dataloader, test_dataloader
 
 def binarize_image(image):
@@ -68,7 +68,7 @@ def get_mnist_binary_static_loaders(
                            val_size=None,
                            shuffle=shuffle
                            )
-    val_dataloader = DataLoader(validation_dataset, shuffle=False, batch_size=batch_size_train, num_workers=8, pin_memory=True)
+    val_dataloader = DataLoader(validation_dataset, shuffle=False, batch_size=batch_size_train, num_workers=2, pin_memory=True)
     return train_dataloader, val_dataloader, test_dataloader
 
 
@@ -91,7 +91,9 @@ def get_omniglot_loaders(
     ])
     data_train_val = Omniglot(root='./', background=True, download=True, transform=transform)
     data_test = Omniglot(root='./', background=False, download=True, transform=transform)
-    return get_dataloaders(data_train_val, data_test,
+    val_dataloader = DataLoader(data_test, shuffle=False, batch_size=batch_size_train, num_workers=2,
+                                pin_memory=True)
+    train_loader, _, test_loader =  get_dataloaders(data_train_val, data_test,
                            seed=seed,
                            batch_size_train=batch_size_train,
                            batch_size_test=batch_size_test,
@@ -99,6 +101,7 @@ def get_omniglot_loaders(
                            val_size=val_size,
                            shuffle=shuffle
                            )
+    return train_loader, val_dataloader, test_loader
 
 
 def get_cifar_10_loaders(
@@ -138,7 +141,7 @@ def get_cifar_10_loaders(
                                                            val_size=None,
                                                            shuffle=shuffle
                                                            )
-    val_dataloader = DataLoader(validation_dataset, shuffle=False, batch_size=batch_size_train)
+    val_dataloader = DataLoader(validation_dataset, shuffle=False, batch_size=batch_size_train, num_workers=2, pin_memory=True)
     return train_dataloader, val_dataloader, test_dataloader
 
 
@@ -176,7 +179,7 @@ def get_svhn_loaders(
                                                            val_size=None,
                                                            shuffle=shuffle
                                                            )
-    val_dataloader = DataLoader(data_val, batch_size=batch_size_train, shuffle=False)
+    val_dataloader = DataLoader(data_val, batch_size=batch_size_train, shuffle=False, num_workers=2, pin_memory=True)
     return train_dataloader, val_dataloader, test_dataloader
 
 
@@ -211,7 +214,7 @@ def get_celabA_loaders(
                                                            val_size=None,
                                                            shuffle=shuffle
                                                            )
-    val_dataloader = DataLoader(data_val, batch_size=batch_size_train, shuffle=False)
+    val_dataloader = DataLoader(data_val, batch_size=batch_size_train, shuffle=False, num_workers=2, pin_memory=True)
     return train_dataloader, val_dataloader, test_dataloader
 
 
