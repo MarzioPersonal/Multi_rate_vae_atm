@@ -85,15 +85,15 @@ class CNNTrainer:
             self.scheduler.step()
 
             # early stopping
-            val_loss = self.best_on_validation()
-            if val_loss < self.best_loss:
-                self.best_loss = val_loss
-                self.val_counter = 0
-            else:
-                self.val_counter += 1
-                if self.val_counter >= 10:
-                    print('Early stopping at epoch:', ep + 1)
-                    break
+            # val_loss = self.best_on_validation()
+            # if val_loss < self.best_loss:
+            #     self.best_loss = val_loss
+            #     self.val_counter = 0
+            # else:
+            #     self.val_counter += 1
+            #     if self.val_counter >= 30:
+            #         print('Early stopping at epoch:', ep + 1)
+            #         break
 
 
             # print(f'Ep {ep + 1}; loss:{ep_loss / len(self.train_loader)}')
