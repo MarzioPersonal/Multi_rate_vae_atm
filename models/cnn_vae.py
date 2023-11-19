@@ -21,6 +21,7 @@ class CnnVae(nn.Module):
                  use_multi_rate=False
                  ):
         super(CnnVae, self).__init__()
+        torch.backends.cudnn.benchmark = True
         if is_cifar and is_celeba:
             raise AttributeError(f'is_cifar and is_celeba cannot be both true')
         self.use_multi_rate = use_multi_rate

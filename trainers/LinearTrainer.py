@@ -46,21 +46,21 @@ class LinearTrainer:
         if self.use_multi_rate:
             with torch.no_grad():
                 beta = self.beta_distribution.sample(sample_shape=torch.Size((batch_size, 1)))
-                beta = beta.to(DEVICE)
+                beta = beta.to(DEVICE, non_blocking=True)
                 # normalize
             return beta
         return self.beta
 
     def train(self):
         for ep in tqdm(range(self.epochs)):
-            ep_loss = 0
+            # ep_loss = 0
             self.model.train()
             # sample mini-batches
             for inputs, _ in self.train_loader:
-                inputs = inputs.to(DEVICE)
+                inputs = inputs.to(DEVICE, non_blocking=True)
                 # sample beta
                 log_betas = self.sample_beta(batch_size=inputs.shape[0])
-                self.optimizer.zero_grad()
+                self.optimizer.zero_grad(set_to_none=True)
                 x_pred, (mu, logvar) = self.model.forward(inputs, log_betas)
                 if self.use_multi_rate:
                     loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, torch.exp(log_betas).squeeze(-1))
@@ -69,7 +69,7 @@ class LinearTrainer:
                 loss.backward()
                 self.optimizer.step()
 
-                ep_loss += loss.item()
+                # ep_loss += loss.item()
             self.scheduler.step()
             val_loss = self.best_on_validation()
             if val_loss < self.best_loss:
@@ -118,6 +118,8 @@ class LinearTrainer:
                     beta_loss_el = beta_loss
                 x_pred, (mu, logvar) = self.model.forward(inputs, beta_in_el)
                 loss, (rate, distortion) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss_el)
+                rate = rate.detach().cpu().item()
+                distortion = distortion.detach().cpu().item()
                 rates += rate
                 distortions += distortion
                 losses += loss.item()
@@ -205,9 +207,9 @@ class GridSearcher:
             os.mkdir(path)
         if not do_only_mrvae:
             df_beta_vae = self.b_vae_()
-            df_mr_vae = self.mr_vae_()
+            # df_mr_vae = self.mr_vae_()
             df_beta_vae.to_csv(f'{path}/beta_vae.csv')
-            df_mr_vae.to_csv(f'{path}/mr_vae.csv')
+            # df_mr_vae.to_csv(f'{path}/mr_vae.csv')
         else:
             df_mr_vae = self.mr_vae_()
             df_mr_vae.to_csv(f'{path}/mr_vae.csv')

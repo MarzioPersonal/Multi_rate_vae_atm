@@ -55,19 +55,17 @@ class ResNetTrainer:
 
     def train(self):
         for ep in tqdm(range(self.epochs)):
-            ep_loss = 0
             self.model.train()
             # sample mini-batches
             for inputs, _ in self.train_loader:
                 inputs = inputs.to(DEVICE)
                 # sample beta
                 log_betas = self.sample_beta(batch_size=inputs.shape[0])
-                self.optimizer.zero_grad()
+                self.optimizer.zero_grad(set_to_none=True)
                 x_pred, (mu, logvar) = self.model.forward(inputs, log_betas)
                 loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, torch.exp(log_betas).squeeze(-1))
                 loss.backward()
                 self.optimizer.step()
-                ep_loss += loss.item()
             self.scheduler.step()
 
             # early stopping
@@ -112,6 +110,8 @@ class ResNetTrainer:
                 beta_loss_el = torch.exp(beta_in_el).squeeze(-1)
                 x_pred, (mu, logvar) = self.model.forward(inputs, beta_in_el)
                 loss, (rate, distortion) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss_el)
+                rate = rate.detach().cpu().item()
+                distortion = distortion.detach().cpu().item()
                 rates += rate
                 distortions += distortion
                 losses += loss.item()

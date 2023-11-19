@@ -20,7 +20,7 @@ class GaussianVAELoss(nn.Module):
         kdl_loss_no_beta = torch.mean(kdl_loss_, dim=0)
         kdl_loss_ = torch.mean(beta * kdl_loss_, dim=0)
 
-        return reconstruction_loss_ + kdl_loss_, (kdl_loss_no_beta.detach().cpu().item(), reconstruction_loss_.detach().cpu().item())
+        return reconstruction_loss_ + kdl_loss_, (kdl_loss_no_beta, reconstruction_loss_)
 
 
 class NonGaussianVAELoss(nn.Module):
@@ -33,4 +33,4 @@ class NonGaussianVAELoss(nn.Module):
         kdl_loss_ = -0.5 * torch.sum(1 + log_var - mu.pow(2) - log_var.exp(), dim=1)
         kdl_loss_no_beta = torch.mean(kdl_loss_, dim=0)
         kdl_loss_ = torch.mean(beta * kdl_loss_, dim=0)
-        return reconstruction_loss_ + kdl_loss_, (kdl_loss_no_beta.detach().cpu().item(), reconstruction_loss_.detach().cpu().item())
+        return reconstruction_loss_ + kdl_loss_, (kdl_loss_no_beta, reconstruction_loss_)
