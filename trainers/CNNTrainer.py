@@ -16,6 +16,62 @@ import os
 
 from tqdm.notebook import tqdm
 
+import math
+
+def frange_cycle_linear(start, stop, n_epoch, n_cycle=4, ratio=0.5):
+    L = np.ones(n_epoch)
+    period = n_epoch/n_cycle
+    step = (stop-start)/(period*ratio) # linear schedule
+
+    for c in range(n_cycle):
+
+        v , i = start , 0
+        while v <= stop and (int(i+c*period) < n_epoch):
+            L[int(i+c*period)] = v
+            v += step
+            i += 1
+    return L    
+
+def frange_cycle_sigmoid(start, stop, n_epoch, n_cycle=4, ratio=0.5):
+    L = np.ones(n_epoch)
+    period = n_epoch/n_cycle
+    step = (stop-start)/(period*ratio) # step is in [0,1]
+    
+    # transform into [-6, 6] for plots: v*12.-6.
+
+    for c in range(n_cycle):
+
+        v , i = start , 0
+        while v <= stop:
+            L[int(i+c*period)] = 1.0/(1.0+ np.exp(- (v*12.-6.)))
+            v += step
+            i += 1
+    return L
+
+def frange_cycle_cosine(start, stop, n_epoch, n_cycle=4, ratio=0.5):
+    L = np.ones(n_epoch)
+    period = n_epoch/n_cycle
+    step = (stop-start)/(period*ratio) # step is in [0,1]
+    
+    # transform into [0, pi] for plots: 
+
+    for c in range(n_cycle):
+
+        v , i = start , 0
+        while v <= stop:
+            L[int(i+c*period)] = 0.5-.5*math.cos(v*math.pi)
+            v += step
+            i += 1
+    return L 
+
+def frange(start, stop, step, n_epoch):
+    L = np.ones(n_epoch)
+    v , i = start , 0
+    while v <= stop:
+        L[i] = v
+        v += step
+        i += 1
+    return L
 
 class CNNTrainer:
 
@@ -41,7 +97,8 @@ class CNNTrainer:
         elif annealing:
             self.annealing = True
             self.name = f'annealing_{lr}'
-            self.anneal_beta = np.flip(np.linspace(start=np.log(0.01), stop=np.log(10.), num=10))
+            self.anneal_beta = frange_cycle_sigmoid(start=0.01, stop=10., n_epoch=epochs)
+            # self.anneal_beta = np.expt(np.flip(np.linspace(start=np.log(0.01), stop=np.log(10.), num=10)))
         else:
             self.name = f'beta_vae_{lr}_{beta}'
         self.beta = beta
@@ -80,7 +137,7 @@ class CNNTrainer:
                 if self.use_multi_rate:
                     loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, torch.exp(log_betas).squeeze(-1))
                 elif self.annealing:
-                    loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.anneal_beta[self.epoch//(self.epochs//len(self.anneal_beta))])
+                    loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.anneal_beta[self.epoch])
                 else:
                     loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta)
                 loss.backward()
@@ -115,7 +172,7 @@ class CNNTrainer:
                     beta_loss = beta.squeeze(-1)
                     beta = torch.log(beta)
                 elif self.annealing:
-                    beta = self.anneal_beta[self.epoch//(self.epochs//len(self.anneal_beta))]
+                    beta = self.anneal_beta[self.epoch]
                     beta_loss = beta
                 else:
                     beta = self.beta
