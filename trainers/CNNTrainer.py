@@ -20,7 +20,7 @@ from tqdm.notebook import tqdm
 class CNNTrainer:
 
     def __init__(self, loaders: tuple, resnet=False, is_cifar=False, is_celeba=False, use_multi_rate=False, beta=1.,
-                 lr=1e-3, latent_dimension=32, warmup_phase=10, epochs=200):
+                 lr=1e-3, latent_dimension=32, warmup_phase=10, epochs=200, annealing=False):
         if resnet:
             model = ResNetVae(latent_dimension=latent_dimension, is_cifar=is_cifar, is_celeba=is_celeba,
                               use_multi_rate=use_multi_rate)
@@ -38,6 +38,9 @@ class CNNTrainer:
         if use_multi_rate:
             self.name = f'mrvae_{lr}_{1.}'
             self.beta_distribution = BetaUniform()
+        elif annealing:
+            self.name = f'annealing_{lr}'
+            self.beta = np.linspace(start=np.log(0.01), stop=np.log(10.), num=10)
         else:
             self.name = f'beta_vae_{lr}_{beta}'
         self.beta = beta
@@ -52,6 +55,7 @@ class CNNTrainer:
 
         self.best_loss = np.inf
         self.val_counter = 0
+        self.epoch = 0
 
     def sample_beta(self, batch_size=0):
         if self.use_multi_rate:
@@ -74,6 +78,8 @@ class CNNTrainer:
                 x_pred, (mu, logvar) = self.model.forward(inputs, log_betas)
                 if self.use_multi_rate:
                     loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, torch.exp(log_betas).squeeze(-1))
+                elif self.annealing:
+                    loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta[self.epoch//20])
                 else:
                     loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta)
                 loss.backward()
@@ -91,6 +97,7 @@ class CNNTrainer:
                 if self.val_counter >= 40:
                     print('Early stopping at epoch:', ep + 1)
                     break
+        self.epoch += 1
         return self.best_loss
 
 
@@ -106,6 +113,9 @@ class CNNTrainer:
                     beta = torch.ones(size=(inputs.shape[0], 1), device=DEVICE, dtype=torch.float32)
                     beta_loss = beta.squeeze(-1)
                     beta = torch.log(beta)
+                elif self.annealing:
+                    beta = self.beta[self.epoch//20]
+                    beta_loss = beta
                 else:
                     beta = self.beta
                     beta_loss = beta
