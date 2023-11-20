@@ -39,8 +39,9 @@ class CNNTrainer:
             self.name = f'mrvae_{lr}_{1.}'
             self.beta_distribution = BetaUniform()
         elif annealing:
+            self.annealing = True
             self.name = f'annealing_{lr}'
-            self.beta = np.linspace(start=np.log(0.01), stop=np.log(10.), num=10)
+            self.anneal_beta = np.linspace(start=np.log(0.01), stop=np.log(10.), num=10)
         else:
             self.name = f'beta_vae_{lr}_{beta}'
         self.beta = beta
@@ -79,7 +80,7 @@ class CNNTrainer:
                 if self.use_multi_rate:
                     loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, torch.exp(log_betas).squeeze(-1))
                 elif self.annealing:
-                    loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta[self.epoch//20])
+                    loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.anneal_beta[self.epoch//20])
                 else:
                     loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta)
                 loss.backward()
@@ -114,7 +115,7 @@ class CNNTrainer:
                     beta_loss = beta.squeeze(-1)
                     beta = torch.log(beta)
                 elif self.annealing:
-                    beta = self.beta[self.epoch//20]
+                    beta = self.anneal_beta[self.epoch//20]
                     beta_loss = beta
                 else:
                     beta = self.beta
