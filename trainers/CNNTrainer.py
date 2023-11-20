@@ -29,6 +29,7 @@ class CNNTrainer:
                            is_cifar=is_cifar,
                            is_celeba=is_celeba, use_multi_rate=use_multi_rate)
         self.model = model.to(DEVICE)
+        # self.model = torch.compile(model, fullgraph=True)#, mode='max-autotune')
         self.train_loader, self.val_loader, self.test_loader = loaders
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         # self.loss_fn = GaussianVAELoss().to(DEVICE)
