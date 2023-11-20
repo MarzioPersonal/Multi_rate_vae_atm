@@ -14,9 +14,9 @@ class MRVAELayer(nn.Module):
     def forward(self, inputs: torch.Tensor, betas: torch.Tensor) -> torch.Tensor:
         scale = self.hyper_block_scale(betas)
         scale = self.activation_fnc(scale)
-        # if len(inputs.shape) == 4:
+        if len(inputs.shape) == 4:
             # Unsqueeze for convolutional layers.
-        scale = scale.unsqueeze(-1).unsqueeze(-1)
+            scale = scale.unsqueeze(-1).unsqueeze(-1)
         return scale * inputs
 
 
