@@ -91,11 +91,11 @@ class CNNTrainer:
         # self.loss_fn = GaussianVAELoss().to(DEVICE)
         self.loss_fn = NonGaussianVAELoss().to(DEVICE)
         self.use_multi_rate = use_multi_rate
+        self.annealing = annealing
         if use_multi_rate:
             self.name = f'mrvae_{lr}_{1.}'
             self.beta_distribution = BetaUniform()
         elif annealing:
-            self.annealing = True
             self.name = f'annealing_{lr}'
             self.anneal_beta = frange_cycle_sigmoid(start=0.01, stop=10., n_epoch=epochs)
             # self.anneal_beta = np.expt(np.flip(np.linspace(start=np.log(0.01), stop=np.log(10.), num=10)))

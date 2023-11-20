@@ -43,6 +43,12 @@ class ResNetTrainer:
             total_epochs=epochs
         )
 
+        self.max_val_counter = 30
+        if b == 0.1:
+            self.max_val_counter = 5
+        elif b == 1:
+            self.max_val_counter = 15
+
         self.best_loss = np.inf
         self.val_counter = 0
 
@@ -75,7 +81,7 @@ class ResNetTrainer:
                 self.val_counter = 0
             else:
                 self.val_counter += 1
-                if self.val_counter >= 30:
+                if self.val_counter >= self.max_val_counter:
                     print('Early stopping at epoch:', ep + 1)
                     break
         return self.best_loss
