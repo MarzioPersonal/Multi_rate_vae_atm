@@ -16,11 +16,67 @@ import os
 
 from tqdm.notebook import tqdm
 
+import math
+
+def frange_cycle_linear(start, stop, n_epoch, n_cycle=4, ratio=0.5):
+    L = np.ones(n_epoch)
+    period = n_epoch/n_cycle
+    step = (stop-start)/(period*ratio) # linear schedule
+
+    for c in range(n_cycle):
+
+        v , i = start , 0
+        while v <= stop and (int(i+c*period) < n_epoch):
+            L[int(i+c*period)] = v
+            v += step
+            i += 1
+    return L    
+
+def frange_cycle_sigmoid(start, stop, n_epoch, n_cycle=4, ratio=0.5):
+    L = np.ones(n_epoch)
+    period = n_epoch/n_cycle
+    step = (stop-start)/(period*ratio) # step is in [0,1]
+    
+    # transform into [-6, 6] for plots: v*12.-6.
+
+    for c in range(n_cycle):
+
+        v , i = start , 0
+        while v <= stop:
+            L[int(i+c*period)] = 1.0/(1.0+ np.exp(- (v*12.-6.)))
+            v += step
+            i += 1
+    return L
+
+def frange_cycle_cosine(start, stop, n_epoch, n_cycle=4, ratio=0.5):
+    L = np.ones(n_epoch)
+    period = n_epoch/n_cycle
+    step = (stop-start)/(period*ratio) # step is in [0,1]
+    
+    # transform into [0, pi] for plots: 
+
+    for c in range(n_cycle):
+
+        v , i = start , 0
+        while v <= stop:
+            L[int(i+c*period)] = 0.5-.5*math.cos(v*math.pi)
+            v += step
+            i += 1
+    return L 
+
+def frange(start, stop, step, n_epoch):
+    L = np.ones(n_epoch)
+    v , i = start , 0
+    while v <= stop:
+        L[i] = v
+        v += step
+        i += 1
+    return L
 
 class CNNTrainer:
 
     def __init__(self, loaders: tuple, resnet=False, is_cifar=False, is_celeba=False, use_multi_rate=False, beta=1.,
-                 lr=1e-3, latent_dimension=32, warmup_phase=10, epochs=200):
+                 lr=1e-3, latent_dimension=32, warmup_phase=10, epochs=200, annealing=False):
         if resnet:
             model = ResNetVae(latent_dimension=latent_dimension, is_cifar=is_cifar, is_celeba=is_celeba,
                               use_multi_rate=use_multi_rate)
@@ -29,6 +85,7 @@ class CNNTrainer:
                            is_cifar=is_cifar,
                            is_celeba=is_celeba, use_multi_rate=use_multi_rate)
         self.model = model.to(DEVICE)
+        # self.model = torch.compile(model, fullgraph=True)#, mode='max-autotune')
         self.train_loader, self.val_loader, self.test_loader = loaders
         self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
         # self.loss_fn = GaussianVAELoss().to(DEVICE)
@@ -37,6 +94,11 @@ class CNNTrainer:
         if use_multi_rate:
             self.name = f'mrvae_{lr}_{1.}'
             self.beta_distribution = BetaUniform()
+        elif annealing:
+            self.annealing = True
+            self.name = f'annealing_{lr}'
+            self.anneal_beta = frange_cycle_sigmoid(start=0.01, stop=10., n_epoch=epochs)
+            # self.anneal_beta = np.expt(np.flip(np.linspace(start=np.log(0.01), stop=np.log(10.), num=10)))
         else:
             self.name = f'beta_vae_{lr}_{beta}'
         self.beta = beta
@@ -51,6 +113,7 @@ class CNNTrainer:
 
         self.best_loss = np.inf
         self.val_counter = 0
+        self.epoch = 0
 
     def sample_beta(self, batch_size=0):
         if self.use_multi_rate:
@@ -63,23 +126,23 @@ class CNNTrainer:
 
     def train(self):
         for ep in tqdm(range(self.epochs)):
-            ep_loss = 0
             self.model.train()
             # sample mini-batches
             for inputs, _ in self.train_loader:
                 inputs = inputs.to(DEVICE)
                 # sample beta
                 log_betas = self.sample_beta(batch_size=inputs.shape[0])
-                self.optimizer.zero_grad()
+                self.optimizer.zero_grad(set_to_none=True)
                 x_pred, (mu, logvar) = self.model.forward(inputs, log_betas)
                 if self.use_multi_rate:
                     loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, torch.exp(log_betas).squeeze(-1))
+                elif self.annealing:
+                    loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.anneal_beta[self.epoch])
                 else:
                     loss, *_ = self.loss_fn(x_pred, inputs, mu, logvar, self.beta)
                 loss.backward()
                 self.optimizer.step()
 
-                ep_loss += loss.item()
             self.scheduler.step()
 
             # early stopping
@@ -92,6 +155,7 @@ class CNNTrainer:
                 if self.val_counter >= 40:
                     print('Early stopping at epoch:', ep + 1)
                     break
+        self.epoch += 1
         return self.best_loss
 
 
@@ -107,6 +171,9 @@ class CNNTrainer:
                     beta = torch.ones(size=(inputs.shape[0], 1), device=DEVICE, dtype=torch.float32)
                     beta_loss = beta.squeeze(-1)
                     beta = torch.log(beta)
+                elif self.annealing:
+                    beta = self.anneal_beta[self.epoch]
+                    beta_loss = beta
                 else:
                     beta = self.beta
                     beta_loss = beta
@@ -132,9 +199,11 @@ class CNNTrainer:
                     beta_loss_el = beta_loss
                 x_pred, (mu, logvar) = self.model.forward(inputs, beta_in_el)
                 loss, (rate, distortion) = self.loss_fn(x_pred, inputs, mu, logvar, beta_loss_el)
+                rate = rate.detach().cpu().item()
+                distortion = distortion.detach().cpu().item()
                 rates += rate
                 distortions += distortion
-                losses += loss.item()
+                losses += loss.cpu().item()
         losses = losses / len(self.test_loader)
         rates = rates / len(self.test_loader)
         distortions = distortions / len(self.test_loader)

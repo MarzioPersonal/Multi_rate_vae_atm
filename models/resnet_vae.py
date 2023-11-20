@@ -25,6 +25,7 @@ class ResNetVae(nn.Module):
                  use_multi_rate=False, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
+        torch.backends.cudnn.benchmark = True
         self.use_multi_rate = use_multi_rate
         self.encoder_list = nn.ModuleList()
         self.decoder_list = nn.ModuleList()

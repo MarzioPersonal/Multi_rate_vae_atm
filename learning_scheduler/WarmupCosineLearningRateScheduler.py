@@ -29,7 +29,7 @@ class WarmupCosineDecayScheduler(torch.optim.lr_scheduler.LRScheduler):
 #     import torch.nn as nn
 #     import torch.optim as optim
 #     model = nn.Linear(10, 10)
-#     optimizer = optim.Adam(model.parameters(), lr=1e-5)
+#     optimizer = optim.Adam(model.parameters(), lr=0.01)
 #     scheduler = WarmupCosineDecayScheduler(optimizer, warmup_epochs=10, total_epochs=200)
 #     lrs = []
 #     for i in range(0, 200):

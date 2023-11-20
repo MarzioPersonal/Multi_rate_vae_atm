@@ -21,6 +21,7 @@ class CnnVae(nn.Module):
                  use_multi_rate=False
                  ):
         super(CnnVae, self).__init__()
+        torch.backends.cudnn.benchmark = True
         if is_cifar and is_celeba:
             raise AttributeError(f'is_cifar and is_celeba cannot be both true')
         self.use_multi_rate = use_multi_rate
@@ -36,13 +37,13 @@ class CnnVae(nn.Module):
         def encode_block(in_channels_, out_channels, kernel_size=4, stride=2, padding=1, last=False):
             if last:
                 return sequential_fn(
-                    encoder_fn(in_channels_, out_channels, kernel_size, stride, padding=padding),
+                    encoder_fn(in_channels_, out_channels, kernel_size, stride, padding=padding, bias=False),
                     nn.BatchNorm2d(out_channels),
                     nn.ReLU(),
                     nn.Flatten(start_dim=1)
                 )
             return sequential_fn(
-                encoder_fn(in_channels_, out_channels, kernel_size, stride, padding=padding),
+                encoder_fn(in_channels_, out_channels, kernel_size, stride, padding=padding, bias=False),
                 nn.BatchNorm2d(out_channels),
                 nn.ReLU()
             )
